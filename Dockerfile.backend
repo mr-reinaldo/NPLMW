@@ -1,0 +1,16 @@
+FROM python:3.10-bullseye AS base
+
+WORKDIR /usr/src/api
+
+COPY backend/requirements.txt ./
+
+RUN apt-get update && \
+    apt-get install -y iputils-ping
+
+
+RUN pip install -U pip && \
+    pip install --no-cache-dir --upgrade -r requirements.txt
+
+COPY backend/ ./
+
+EXPOSE 4000
