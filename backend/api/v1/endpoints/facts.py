@@ -62,7 +62,7 @@ async def facts(device: Device, current_user = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get facts from {device.hostname} due to {e}",
+            detail=f"Falha ao obter informações do dispositivo {device.hostname}",
         )
     return JSONResponse(
         status_code=status.HTTP_200_OK,

@@ -3,8 +3,9 @@ import {ref} from 'vue'
 import http from '@/services/http'
 
 export const useNapalmStore = defineStore('napalm',() => {
-    const status = ref(false)
-    const message = ref('')
+    const status = ref(0)
+    const messageSucesso = ref('')
+    const messageFalha = ref('')
     const data = ref({})
     const timestamp = ref(0)
 
@@ -15,16 +16,25 @@ export const useNapalmStore = defineStore('napalm',() => {
         try{
             const response = await http.post('/facts', device)
 
-            if (response.data.status){
-                status.value = response.data.status
-                message.value = response.data.message
-                data.value = response.data.data
+            // Se status for 200, seta o valor de status para 200
+            // e o valor de data para o valor de data que veio da api
+            if(response.status === 200){
+                status.value = response.status
+                messageSucesso.value = response.data.message
+                data.value = response.data
                 timestamp.value = response.data.timestamp
-            }else{
-                throw new Error(response.data.message)
             }
+
         } catch(error){
-            message.value = error.message
+            // Se status for 500, seta o valor de status para 500
+            // e o valor de message para o valor de message que veio da api
+            if(error.response.status === 500){
+                // Zera o valor de data
+                data.value = {}
+                
+                status.value = error.response.status
+                messageFalha.value = error.response.data.detail
+            }
         }
     }
 
@@ -63,7 +73,8 @@ export const useNapalmStore = defineStore('napalm',() => {
 
     return {
         status,
-        message,
+        messageSucesso,
+        messageFalha,
         data,
         timestamp,
         getFacts,

@@ -96,14 +96,14 @@
                             <v-icon
                                 small
                                 class="mr-2"
-                                @click=" state.selectedDevice=item; getConfig();"
+                                @click=" selectedDevice(item); getConfig();"
                             >
                                 mdi-eye
                             </v-icon>
                             <v-icon
                                 small
                                 class="mr-2"
-                                @click="editDevice(item)"
+                                @click="openEditDialog(item)"
                             >
                                 mdi-pencil
                             </v-icon>
@@ -116,6 +116,101 @@
                         </template>
                     </v-data-table>
                 </v-card-text>
+
+                <!--Dialog para editar-->
+                <v-dialog v-model="state.showEditDialog" fullscreen hide-overlay transition="dialiog-bottom-transition">
+                    <v-card>
+                        <v-card-title class="headline">
+                            Editar Dispositivo
+                        </v-card-title>
+                        <v-card-text>
+                            <v-form ref="form" v-model="valid" lazy-validation>
+                                <v-container>
+                                    <v-row>
+                                        <v-col cols="12" sm="6">
+                                            <v-text-field
+                                                v-model="state.selectedDevice.hostname"
+                                                label="Endereço IP"
+                                                required
+                                                :rules="hostnameRules"
+                                            ></v-text-field>
+                                        </v-col>
+
+                                        <v-col cols="12" sm="6">
+                                            <v-text-field
+                                                v-model="state.selectedDevice.port"
+                                                label="Porta"
+                                                required
+                                                :rules="portRules"
+                                            ></v-text-field>
+                                        </v-col>
+
+                                        <v-col cols="12" sm="6">
+                                            <v-text-field
+                                                v-model="state.selectedDevice.device_name"
+                                                label="Nome"
+                                                required
+                                                :rules="deviceNameRules"
+                                            ></v-text-field>
+                                        </v-col>
+
+                                        <v-col cols="12" sm="6">
+                                            <v-select
+                                                v-model="state.selectedDevice.device_type"
+                                                :items="['router', 'switch']"
+                                                label="Tipo"
+                                                required
+                                                :rules="[
+                                                    v => !!v || 'O tipo de dispositivo é obrigatório'
+                                                ]"
+                                            ></v-select>
+                                        </v-col>
+                                    
+                                        <v-col cols="12" sm="6">
+                                            <v-select
+                                                v-model="state.selectedDevice.driver_name"
+                                                :items="['ios', 'iosxr', 'nxos', 'junos', 'eos']"
+                                                label="Driver"
+                                                required
+                                                :rules="[
+                                                    v => !!v || 'O driver é obrigatório'
+                                                ]"
+                                            ></v-select>
+                                        </v-col>
+                                    
+                                        <v-col cols="12" sm="6">
+                                            <v-text-field
+                                                v-model="state.selectedDevice.username"
+                                                label="Usuário"
+                                                required
+                                                :rules="usernameRules"
+                                            ></v-text-field>
+                                        </v-col>
+                                    
+                                        <v-col cols="12" sm="6">
+                                            <v-text-field
+                                                v-model="state.selectedDevice.password"
+                                                label="Senha"
+                                                :append-icon="state.showPassword ? 'mdi-eye' : 'mdi-eye-off'"
+                                                :type="state.showPassword ? 'text' : 'password'"
+                                                required
+                                                :rules="passwordRules"
+                                                @click:append="state.showPassword = !state.showPassword"
+                                            ></v-text-field>
+
+                                        </v-col>
+                                    </v-row>
+                                
+                                </v-container>
+                            </v-form>
+                        </v-card-text>
+                        <v-card-actions>
+                            <v-spacer></v-spacer>
+                            <v-btn color="blue darken-1" text @click="state.showEditDialog = false; loadDevices()">Cancelar</v-btn>
+                            <v-btn color="blue darken-1" text @click="state.showEditDialog = false; updateDevice()">Salvar</v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
                 
                 <!--Dialog para deletar-->
                 <v-dialog v-model="state.showDeleteDialog" max-width="500px">
@@ -300,6 +395,7 @@ const interfaces = ref({});
 const search = ref('');
 const config = ref({});
 const totalDevices = ref(0);
+const valid = ref(true);
 
 
 const options = ref({
@@ -317,7 +413,8 @@ const state = ref({
     selectedDevice: null,
     showInfoDialog: false,
     showDeleteDialog: false,
-    detail: ''
+    showEditDialog: false,
+    detail: '',
 });
 
 // Cabeçalhos da tabela
@@ -360,6 +457,49 @@ const headerInterfaces = [
     { title: 'Speed', value: 'speed'}
 ];
 
+// Rules para validação do formulário
+const hostnameRules = [
+    v => !!v || 'Endereço IP é obrigatório',
+    // Validar se o hostname é um endereço IP
+    v => {
+        const regex = new RegExp('\\b((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\.|$)){4}\\b');
+        return regex.test(v) || 'Informe um endereço IP válido';
+    }
+];
+
+const portRules = [
+    v => !!v || 'A porta é obrigatória',
+    v => {
+        const validPortRegex = /^(?:[1-9]\d{0,3}|[1-5]\d{4}|65[0-4]\d{2}|655[0-2]\d|6553[0-5])$/;
+        return validPortRegex.test(v) || 'Informe uma porta válida (entre 1 e 65535)';
+    }
+];
+
+const usernameRules = [
+    v => !!v || 'O usuário é obrigatório',
+    // Permitir apenas letras, números, underline e hífen
+    v => /^[a-zA-Z0-9_-]*$/.test(v) || 'O usuário não pode conter caracteres especiais'
+];
+
+const passwordRules = [
+    v => !!v || 'A senha é obrigatória',
+];
+
+
+const deviceNameRules = [
+    v => !!v || 'O nome do dispositivo é obrigatório',
+    v => (v && v.length <= 20) || 'O nome deve ter no máximo 20 caracteres',
+    v => (v && v.length >= 2) || 'O nome deve ter no mínimo 2 caracteres',
+    v => (v && /^[a-zA-Z0-9-]*$/.test(v)) || 'O nome deve conter apenas letras, números e hífens'
+];
+
+
+
+// Dispositivo selecionado
+const selectedDevice = (device) => {
+    state.value.selectedDevice = device;
+}
+
 
 // Carrega os dispositivos
 const loadDevices = async() => {
@@ -382,21 +522,24 @@ const getConfig = async() => {
     }
 
     state.value.isLoading = true;
+    // Carrega as informações do dispositivo
+    await napalmStore.getFacts(device);
 
-    try{
-        await napalmStore.getFacts(device);
-        config.value = napalmStore.data;
-        interfaces.value = napalmStore.data.interfaces;
-
-        state.value.showInfoDialog = true;
-        
-    } catch (error) {
-        state.value.detail = error;
-        state.value.showSnackbar = true;
-    }finally{
+    // Verifica status da requisição
+    if(napalmStore.status === 200){
         state.value.isLoading = false;
+        config.value = napalmStore.data.data;
+        interfaces.value = config.value.interfaces;
+        state.value.detail = napalmStore.messageSucesso;
+        state.value.showSnackbar = true;
+        state.value.showInfoDialog = true;
     }
 
+    if(napalmStore.status === 500){
+        state.value.isLoading = false;
+        state.value.detail = napalmStore.messageFalha;
+        state.value.showSnackbar = true;
+    }
 }
 
 // Deleta o dispositivo
@@ -418,6 +561,42 @@ const deleteDevice = async() => {
     }
 }
 
+// Abrir dialog para editar dispositivo
+const openEditDialog = (device) => {
+    selectedDevice(device);
+    state.value.showEditDialog = true;
+}
+
+// Atualizar dispositivo
+const updateDevice = async() => {
+    state.isLoading = true;
+
+    const uuid = state.value.selectedDevice.uuid;
+
+    // Remove o uuid, owner, created_at e updated_at do objeto
+    delete state.value.selectedDevice.uuid;
+    delete state.value.selectedDevice.owner;
+    delete state.value.selectedDevice.created_at;
+    delete state.value.selectedDevice.updated_at;
+
+
+    try{
+        await deviceStore.updateDevice(uuid, state.value.selectedDevice);
+        state.value.showEditDialog = false;
+        state.value.detail = 'Dispositivo atualizado com sucesso!';
+        state.value.showSnackbar = true;
+        loadDevices();
+    } catch (error) {
+        state.value.detail = error;
+        state.value.showSnackbar = true;
+    }finally{
+        state.value.isLoading = false;
+    }
+}
+
+
+
+
 // Carrega os dispositivos antes de montar o componente
 onBeforeMount(() => {
     loadDevices();
@@ -427,8 +606,7 @@ onBeforeMount(() => {
 
 
 <script>
-
-export default{
-    name: 'DevicesPage'
+export default {
+    name: 'DevicesPage',
 }
 </script>
