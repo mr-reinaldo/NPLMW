@@ -169,7 +169,7 @@ const getInterfaces = async () => {
     state.value.isLoading = false
 
     // Filter interfaces in data
-    interfaces.value = napalmStore.data.interfaces
+    interfaces.value = napalmStore.data.data.interfaces
 
     //Get interfaces names
     for (const [key, value] of Object.entries(interfaces.value)) {
