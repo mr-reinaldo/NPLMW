@@ -1,4 +1,4 @@
-# NPLMW (NAPALM Web Apllication)
+# NPLMW (NAPALM Web Application)
 
 ## Descrição
 O NPLMW é uma aplicação web que tem como objetivo facilitar a configuração de equipamentos de rede, utilizando o NAPALM como ferramenta de automação.
